@@ -34,143 +34,141 @@ class ControllerToolImportYml extends Controller {
     $this->load->model('localisation/language');
     $this->load->model('setting/setting');
 
-    $this->settings['import_yml_file'] = $this->model_setting_setting->getSetting('import_yml_file');
-
+    $this->settings = $this->model_setting_setting->getSetting('import_yml');
     if (($this->request->server['REQUEST_METHOD'] == 'POST') && ($this->validate())) {
       $this->model_setting_setting->editSetting('import_yml', $this->request->post);
 
-      $this->file = DIR_DOWNLOAD . 'import.yml';
+      $file = DIR_DOWNLOAD . 'import.yml';
       
-      if ((isset( $this->request->files['upload'] )) && (is_uploaded_file($this->request->files['upload']['tmp_name']))) {
-        move_uploaded_file($this->request->files['upload']['tmp_name'], $this->file);
-      } elseif (!empty($this->request->post['url'])) {
-        $file_content = file_get_contents($this->request->post['url']);
-        file_put_contents($this->file, $file_content);
+      if ((isset( $this->request->files['import_yml_upload'] )) && (is_uploaded_file($this->request->files['import_yml_upload']['tmp_name']))) {
+        move_uploaded_file($this->request->files['import_yml_upload']['tmp_name'], $file);
       }
+	  elseif (!empty($this->request->post['import_yml_url'])) {
+        if (filter_var($this->request->post['import_yml_url'], FILTER_VALIDATE_URL)){
+			$file_content = file_get_contents($this->request->post['import_yml_url']);
+			file_put_contents($file, $file_content);
+		} else {
+			$this->error['warning'] = $this->language->get('error_empty');	
+		}
+	  } else {
+		$this->error['warning'] = $this->language->get('error_empty');
+	  }
       
-      $force = (isset($this->request->post['force']) && $this->request->post['force'] == 'on');
+	if (isset($this->error['warning'])) {
+		$data['error_warning'] = $this->error['warning'];
+	} else {
+		  
+		$force = (isset($this->request->post['import_yml_force']) && $this->request->post['import_yml_force'] == 'on');
 
-      if (!empty($this->request->post['update'])) {
-        $this->columnsUpdate = $this->request->post['update'];
-      }
+		if (!empty($this->request->post['import_yml_upload'])) {
+			$this->columnsUpdate['import_yml_upload']= $this->request->post['import_yml_upload'];
+			$this->columnsUpdate['import_yml_url']= $this->request->post['import_yml_url'];
+			$this->columnsUpdate['import_yml_name']= $this->request->post['import_yml_name'];
+			$this->columnsUpdate['import_yml_description']= $this->request->post['import_yml_description'];
+			$this->columnsUpdate['import_yml_category']= $this->request->post['import_yml_category'];
+			$this->columnsUpdate['import_yml_price']= $this->request->post['import_yml_price'];
+			$this->columnsUpdate['import_yml_image']= $this->request->post['import_yml_image'];
+			$this->columnsUpdate['import_yml_manufacturer']= $this->request->post['import_yml_manufacturer'];
+			$this->columnsUpdate['import_yml_attributes']= $this->request->post['import_yml_attributes'];
+		}
 
-      $this->parseFile($this->file, $force);
+		$this->parseFile($file, $force);
 
-      $this->model_setting_setting->editSetting('import_yml_file', array());
+		#$this->model_setting_setting->editSetting('import_yml', array());
 
-      $this->session->data['success'] = sprintf(
-        $this->language->get('text_success'),
-        $this->productsAdded,
-        $this->productsUpdated
-      );
-
-      /*
-      if (!empty($this->settings['import_yml_file'])) {
-        $this->session->data['success'] = sprintf(
-          $this->language->get('text_success_multiload'),
-          $this->productsAdded,
-          $this->productsUpdated,
-          $this->settings['import_yml_file']['loaded'],
-          $this->settings['import_yml_file']['offers'],
-          $this->url->link('tool/import_yml/cancel', 'token=' . $this->session->data['token'], 'SSL')
-        );
-
-        $this->data['reload'] = true;
-      }
-
-      if ($this->settings['import_yml_file']['loaded'] > $this->settings['import_yml_file']['offers']) {
-        $this->model_setting_setting->editSetting('import_yml_file', array());
-      }*/
+		$this->session->data['success'] = sprintf(
+			$this->language->get('text_success'),
+			$this->productsAdded,
+			$this->productsUpdated
+		);
+	  }
     }
 
-    $this->data['heading_title'] = $this->language->get('heading_title');
-    $this->data['entry_restore'] = $this->language->get('entry_restore');
-    $this->data['entry_url'] = $this->language->get('entry_url');
-    $this->data['entry_description'] = $this->language->get('entry_description');
-    $this->data['entry_force'] = $this->language->get('entry_force');
-    $this->data['entry_update'] = $this->language->get('entry_update');
-    $this->data['entry_field_name'] = $this->language->get('entry_field_name');
-    $this->data['entry_field_description'] = $this->language->get('entry_field_description');
-    $this->data['entry_field_category'] = $this->language->get('entry_field_category');
-    $this->data['entry_field_price'] = $this->language->get('entry_field_price');
-    $this->data['entry_field_image'] = $this->language->get('entry_field_image');
-    $this->data['entry_field_manufacturer'] = $this->language->get('entry_field_manufacturer');
-    $this->data['entry_field_attribute'] = $this->language->get('entry_field_attribute');
-    $this->data['entry_save_settings'] = $this->language->get('entry_save_settings');
-    $this->data['button_import'] = $this->language->get('button_import');
-    $this->data['button_save'] = $this->language->get('button_save');
-    $this->data['tab_general'] = $this->language->get('tab_general');
+    $data['heading_title'] = $this->language->get('heading_title');
+    $data['entry_restore'] = $this->language->get('entry_restore');
+    $data['entry_url'] = $this->language->get('entry_url');
+    $data['entry_description'] = $this->language->get('entry_description');
+    $data['entry_force'] = $this->language->get('entry_force');
+    $data['entry_update'] = $this->language->get('entry_update');
+    $data['entry_field_name'] = $this->language->get('entry_field_name');
+    $data['entry_field_description'] = $this->language->get('entry_field_description');
+    $data['entry_field_category'] = $this->language->get('entry_field_category');
+    $data['entry_field_price'] = $this->language->get('entry_field_price');
+    $data['entry_field_image'] = $this->language->get('entry_field_image');
+    $data['entry_field_manufacturer'] = $this->language->get('entry_field_manufacturer');
+    $data['entry_field_attribute'] = $this->language->get('entry_field_attribute');
+    $data['entry_save_settings'] = $this->language->get('entry_save_settings');
+    $data['button_import'] = $this->language->get('button_import');
+    $data['button_save'] = $this->language->get('button_save');
+    $data['tab_general'] = $this->language->get('tab_general');
 
-    $this->data['settings'] = $settings = $this->model_setting_setting->getSetting('import_yml');
+    $data['settings'] = $this->settings = $this->model_setting_setting->getSetting('import_yml');
     
-    $this->data['save'] = $this->url->link('tool/import_yml/save', 'token=' . $this->session->data['token'], 'SSL');
+    $data['save'] = $this->url->link('tool/import_yml/save', 'token=' . $this->session->data['token'], 'SSL');
 
      if (isset($this->error['warning'])) {
-      $this->data['error_warning'] = $this->error['warning'];
+      $data['error_warning'] = $this->error['warning'];
     } else {
-      $this->data['error_warning'] = '';
+      $data['error_warning'] = '';
     }
     
     if (isset($this->session->data['success'])) {
-      $this->data['success'] = $this->session->data['success'];
+      $data['success'] = $this->session->data['success'];
     
       unset($this->session->data['success']);
     } else {
-      $this->data['success'] = '';
+      $data['success'] = '';
     }
 
-    $this->data['breadcrumbs'] = array();
+    $data['breadcrumbs'] = array();
 
-    $this->data['breadcrumbs'][] = array(
+    $data['breadcrumbs'][] = array(
       'text'      => $this->language->get('text_home'),
-      'href'      => $this->url->link('common/home', 'token=' . $this->session->data['token'], 'SSL'),
-      'separator' => FALSE
+      'href'      => $this->url->link('common/dashboard', 'token=' . $this->session->data['token'], 'SSL'),
     );
 
-    $this->data['breadcrumbs'][] = array(
+    $data['breadcrumbs'][] = array(
       'text'      => $this->language->get('heading_title'),
-      'href'      => $this->url->link('tool/export', 'token=' . $this->session->data['token'], 'SSL'),
-      'separator' => ' :: '
+      'href'      => $this->url->link('tool/import_yml', 'token=' . $this->session->data['token'], 'SSL'),
     );
     
-    $this->data['action'] = $this->url->link('tool/import_yml', 'token=' . $this->session->data['token'], 'SSL');
+    $data['action'] = $this->url->link('tool/import_yml', 'token=' . $this->session->data['token'], 'SSL');
 
-    $this->data['export'] = $this->url->link('tool/import_yml/download', 'token=' . $this->session->data['token'], 'SSL');
+    $data['export'] = $this->url->link('tool/import_yml/download', 'token=' . $this->session->data['token'], 'SSL');
 
-    $this->settings['import_yml_file'] = $this->model_setting_setting->getSetting('import_yml_file');
+    $this->settings = $this->model_setting_setting->getSetting('import_yml');
 
-    if (!empty($this->settings['import_yml_file'])) {
-      $this->data['loaded'] = $this->settings['import_yml_file']['loaded'];
+    if (!empty($this->settings['import_yml_url'])) {
+      $data['loaded'] = $this->settings['import_yml_url'];
       
-      if ($this->data['loaded']) {
+      if ($data['loaded']) {
         $this->session->data['success'] = sprintf(
           $this->language->get('text_success_multiload'),
-          $this->settings['import_yml_file']['loaded'],
+          $this->settings['import_yml_url'],
           $this->url->link('tool/import_yml/cancel', 'token=' . $this->session->data['token'], 'SSL')
         );
 
-        $this->data['reload'] = true;
+        $data['reload'] = true;
       }
     }
-        
-    $this->template = 'tool/import_yml.tpl';
-    $this->children = array(
-      'common/header',
-      'common/footer',
-    );
-    
-    $this->response->setOutput($this->render());
+    $data['header'] = $this->load->controller('common/header');
+	$data['column_left'] = $this->load->controller('common/column_left');
+	$data['footer'] = $this->load->controller('common/footer');
+	
+	$this->response->setOutput($this->load->view('tool/import_yml.tpl', $data));
   }
 
   private function parseFile($file, $force = false, $cli = false) 
   {
     set_time_limit(0);
     
+	set_time_limit(0);
+    
     $xmlstr = file_get_contents($file);
     $xml = new SimpleXMLElement($xmlstr);
 
     $this->fileXML = $xml;
-
+	
     if ($force) {
       $this->model_tool_import_yml->deleteCategories();
       $this->model_tool_import_yml->deleteProducts();
@@ -179,25 +177,25 @@ class ControllerToolImportYml extends Controller {
       $this->model_tool_import_yml->deleteAttributeGroups();
     }
 
-    $result = $this->db->query('SELECT product_id, sku FROM `' . DB_PREFIX . 'product` ');
-    if (!empty($result->rows)) {
-      foreach ($result->rows as $row) {
-        $this->skuProducts[ $row['sku'] ] = $row['product_id'];
+    $result = $this->model_tool_import_yml->loadProducts();
+	if (!empty($result)) {
+      foreach ($result as $row) {
+		$this->skuProducts[ $row['model'] ] = $row['product_id'];
       }
     }
     
     // Prepare big file upload feature
     if (!$cli) {
-      if (empty($this->settings['import_yml_file']['file_hash'])
-        || $this->settings['import_yml_file']['file_hash'] != md5($this->file)
+      if (empty($this->settings['import_yml_file_hash'])
+        || $this->settings['import_yml_file_hash'] != md5($this->file)
       ) {
-        $this->model_setting_setting->editSetting('import_yml_file', array(
-          'file_hash' => md5($this->file),
-          'file_name' => DIR_DOWNLOAD . 'import.yml',
-          'loaded' => 0
+		$this->model_setting_setting->editSetting('import_yml', $this->settings + array(
+          'import_yml_file_hash' => md5($this->file),
+          'import_yml_file_name' => DIR_DOWNLOAD . 'import.yml',
+          'import_yml_loaded' => 0
         ));
 
-        $this->settings['import_yml_file'] = $this->model_setting_setting->getSetting('import_yml_file');
+        $this->settings = $this->model_setting_setting->getSetting('import_yml');
       }
     }
     
@@ -205,10 +203,10 @@ class ControllerToolImportYml extends Controller {
     $this->addProducts($xml->shop->offers, $force, $cli);
   }
 
-  private function addCategories($categories) 
-  {
-    $this->categoryMap = array(
-      0 => 0
+  private function addCategories($categories) {
+    $this->categoryMap[0] = array(
+      'category_id' 	=> 0,
+	  'name' 			=> 0
     );
     
     $categoriesList = array();
@@ -225,15 +223,17 @@ class ControllerToolImportYml extends Controller {
       $previousCount = count($categoriesList);
       
       foreach ($categoriesList as $source_category_id => $item) {
-        if (array_key_exists((int)$item['parent_id'], $this->categoryMap)) {
-          $category = $this->db->query('SELECT * FROM `' . DB_PREFIX . 'category` INNER JOIN `' . DB_PREFIX . 'category_description` ON `' . DB_PREFIX . 'category_description`.category_id = `' . DB_PREFIX . 'category`.category_id WHERE parent_id = ' . (int)$this->categoryMap[$item['parent_id']] . ' AND `' . DB_PREFIX . 'category_description`.name LIKE "' . $this->db->escape($item['name']) . '"');
-          
-          if ($category->row) {
-            $this->categoryMap[(int)$source_category_id] = $category->row['category_id'];
+		if (array_key_exists((int)$item['parent_id'], $this->categoryMap)) {
+          $category = $this->model_tool_import_yml->loadCategory($this->categoryMap[$item['parent_id']]['category_id'], $item['name']);
+		  if ($category->row) {
+            $this->categoryMap[(int)$source_category_id] = array(
+				'category_id' 	=> $category->row['category_id'],
+				'name' 			=> $item['name']
+				);
           } else {
             $category_data = array (
-              'sort_order' => 0,
-              'parent_id' => $this->categoryMap[ (int)$item['parent_id'] ],
+			  'sort_order' => 0,
+              'parent_id' => $this->categoryMap[ (int)$item['parent_id'] ]['category_id'],
               'top' => 0,
               'status' => 1,
               'column' => '',
@@ -258,7 +258,10 @@ class ControllerToolImportYml extends Controller {
               $category_data['top'] = 1;
             }
         
-            $this->categoryMap[(int)$source_category_id] = $this->model_catalog_category->addCategory($category_data);
+            $this->categoryMap[(int)$source_category_id] = array(
+				'category_id'	=> $this->model_catalog_category->addCategory($category_data),
+				'name' 			=> $item['name']
+				);
           }
           unset($categoriesList[$source_category_id]);
         }
@@ -273,10 +276,10 @@ class ControllerToolImportYml extends Controller {
     }
   }
 
-  private function addProducts($offers, $force = false, $cli = false) 
-  {
-    // get first attribute group
-    $res = $this->db->query('SELECT * FROM `' . DB_PREFIX  . 'attribute_group` ORDER BY `attribute_group_id` LIMIT 0, 1');
+  private function addProducts($offers, $force = false, $cli = false) {
+	$this->error['warning'] = "";
+	// get first attribute group
+	$res = $this->model_tool_import_yml->loadAttributeGroup();
     if (!$res->row) {
       $attr_group_data = array (
         'sort_order' => 0,
@@ -297,16 +300,16 @@ class ControllerToolImportYml extends Controller {
         }
     */
     
-    if (!is_dir(DIR_IMAGE . 'data/import_yml')) {
-        mkdir(DIR_IMAGE . 'data/import_yml');
+    if (!is_dir(DIR_IMAGE . 'catalog/import_yml')) {
+        mkdir(DIR_IMAGE . 'catalog/import_yml');
     }
 
     $vendorMap = $this->model_tool_import_yml->loadManufactures();
     
     $attrMap = $this->model_tool_import_yml->loadAttributes();
-    
-    if (!$cli && !empty($this->settings['import_yml_file'])) {
-      $start = (int)$this->settings['import_yml_file']['loaded'];
+	
+    if (!$cli && !empty($this->settings)) {
+      $start = (int)$this->settings['import_yml_loaded'];
     } else {
       $start = 0;
     }
@@ -314,14 +317,12 @@ class ControllerToolImportYml extends Controller {
     //Here is start adding products
     $n = count($offers->offer);
     $flushCounter = $this->flushCount;
-    
-    //foreach ($offers->offer as $offer) {
     for ($i = $start; $i < $n; $i++) {
       $offer = $offers->offer[ $i ];
 
       $product_images = array();
       
-      $dir_name = 'data/import_yml/' . implode('/', str_split((string)$offer['id'], 3)) . '/';
+      $dir_name = 'catalog/import_yml/' . implode('/', str_split((string)$offer['id'], 3)) . '/';
       if (!is_dir(DIR_IMAGE . $dir_name)) {
         mkdir(DIR_IMAGE . $dir_name, 0777, true);
       }
@@ -365,24 +366,28 @@ class ControllerToolImportYml extends Controller {
           'seo_h1' => $productName,
         );
       }
-
-      if (!isset($this->categoryMap[(int)$offer->categoryId])) {
-        // continue;
-        die('Invalid category id = ' . (int)$offer->categoryId . ' for offer ' . $offer['id']);
-      }
-      
-      $data = array(
+    
+	  if ((int)$offer->categoryId == 0 || !isset($this->categoryMap[(int)$offer->categoryId])) {
+		foreach ($this->categoryMap as $key => $cat) {
+			if (in_array((string)$offer->categoryId, $cat)){
+				$id_category = $cat['category_id'];
+			}
+		}
+	  } else {
+		  $id_category = $this->categoryMap[(int)$offer->categoryId]['category_id'];
+	  } 
+	  $data = array(
         'product_description' => $product_description,
         'product_special' => array (),
         'product_store' => array(0),
-        'main_category_id' => $this->categoryMap[(int)$offer->categoryId],
+        'main_category_id' => $id_category,
         'product_category' => array (
-          $this->categoryMap[(int)$offer->categoryId],
+          $id_category,
         ),
         'product_attribute' => array(),
-        'model' => (string)$offer->vendorCode,
+        'model' => (!empty($offer->vendorCode))? (string)$offer->vendorCode : (string)$offer['id'],
         'image' => $image_path,
-        'sku'   => (isset($offer->vendorCode))? (string)$offer->vendorCode : (string)$offer['id'],
+        'sku'   => (!empty($offer->vendorCode))? (string)$offer->vendorCode : (string)$offer['id'],
         'keyword' => (string)$offer->vendorCode,
         'upc'  => '',
         'ean'  => '',
@@ -469,13 +474,13 @@ class ControllerToolImportYml extends Controller {
           );
         }
       }
-
-      if (array_key_exists($data['sku'], $this->skuProducts)) {
-        $data = $this->changeDataByColumns($this->skuProducts[ $data['sku'] ], $data);
-        $this->model_catalog_product->editProduct($this->skuProducts[ $data['sku'] ], $data);
+	  if (array_key_exists($data['model'], $this->skuProducts)) {
+		$data = $this->changeDataByColumns($this->skuProducts[ $data['model'] ], $data);
+        $this->model_catalog_product->editProduct($this->skuProducts[ $data['model'] ], $data);
         $this->productsUpdated++;
+		if ($force) { $this->error['warning'] .= "Update Product : " . $data['model'] . " ";}
       } else {
-        $this->skuProducts[ $data['sku'] ] = $this->model_catalog_product->addProduct($data);
+        $this->skuProducts[ $data['model'] ] = $this->model_catalog_product->addProduct($data);
         $this->productsAdded++;
       }
 
@@ -484,10 +489,10 @@ class ControllerToolImportYml extends Controller {
       if ($flushCounter <= 0) {
         $loaded = $i;
 
-        $this->model_setting_setting->editSetting('import_yml_file', array(
-          'file_hash' => md5($this->file),
-          'offers' => count($offers->offer),
-          'loaded' => $loaded
+        $this->model_setting_setting->editSetting('import_yml', $this->settings + array(
+          'import_yml_file_hash' => md5($this->file),
+          'import_yml_offers' => count($offers->offer),
+          'import_yml_loaded' => $loaded
         ));
 
         $flushCounter = $this->flushCount;
@@ -531,50 +536,37 @@ class ControllerToolImportYml extends Controller {
     rmdir($dir);
   }
 
-  private function validate()
-  {
-    if (!$this->user->hasPermission('modify', 'tool/import_yml')) {
-      $this->error['warning'] = $this->language->get('error_permission');
-    }
-    
-    if (!$this->error) {
-      return TRUE;
-    } else {
-      return FALSE;
-    }
-  }
-
   private function changeDataByColumns($product_id, $data)
   {
     $productData = $this->model_catalog_product->getProduct($product_id);
     $productAttributes = $this->model_catalog_product->getProductAttributes($product_id);
 
     if (empty($this->columnsUpdate['name'])) {
-      $data['product_description'][1]['name'] = $productData['name'];
+      $data['product_description'][1]['import_yml_name'] = $productData['name'];
     }
 
-    if (empty($this->columnsUpdate['description'])) {
+    if (empty($this->columnsUpdate['import_yml_description'])) {
       $data['product_description'][1]['description'] = $productData['description'];
     }
 
-    if (empty($this->columnsUpdate['category'])) {
+    if (empty($this->columnsUpdate['import_yml_category'])) {
       $productData = array_merge($productData, array('product_category' => $this->model_catalog_product->getProductCategories($product_id)));
       $data['product_category'] = $productData['product_category'];
     }
     
-    if (empty($this->columnsUpdate['price'])) {
+    if (empty($this->columnsUpdate['import_yml_price'])) {
       $data['price'] = $productData['price'];
     }
 
-    if (empty($this->columnsUpdate['image'])) {
+    if (empty($this->columnsUpdate['import_yml_image'])) {
       $data['image'] = $productData['image'];
     }
 
-    if (empty($this->columnsUpdate['manufacturer'])) {
+    if (empty($this->columnsUpdate['import_yml_manufacturer'])) {
       $data['manufacturer_id'] = $productData['manufacturer_id'];
     }
 
-    if (empty($this->columnsUpdate['attributes'])) {
+    if (empty($this->columnsUpdate['import_yml_attributes'])) {
       $data['product_attribute'] = $productAttributes;
     }
 
@@ -593,16 +585,16 @@ class ControllerToolImportYml extends Controller {
     $this->load->model('localisation/language');
     $this->load->model('setting/setting');
 
-    $settings = $this->model_setting_setting->getSetting('import_yml');
+    $this->settings = $this->model_setting_setting->getSetting('import_yml');
 
-    if (!empty($settings['url'])) {
-      $force = (isset($settings['force']) && $settings['force'] == 'on');
+    if (!empty($this->settings['import_yml_url'])) {
+      $force = (isset($this->settings['import_yml_force']) && $this->settings['import_yml_force'] == 'on');
 
-      if (!empty($settings['update'])) {
-        $this->columnsUpdate = $settings['update'];
+      if (!empty($this->settings['update'])) {
+        $columnsUpdate = $this->settings['update'];
       }
 
-      $this->parseFile($settings['url'], $force, true);
+      $parseFile($this->settings['import_yml_url'], $force, true);
     }
   }
 
@@ -612,12 +604,14 @@ class ControllerToolImportYml extends Controller {
     $this->load->language('tool/import_yml');
 
     if (($this->request->server['REQUEST_METHOD'] == 'POST') && ($this->validate())) {
-      $this->model_setting_setting->editSetting('import_yml', $this->request->post);
+      		
+	  $this->model_setting_setting->editSetting('import_yml', $this->request->post);
 
       $this->session->data['success'] = $this->language->get('text_settings_success');
-    }
-
-    $this->redirect($this->url->link('tool/import_yml', 'token=' . $this->session->data['token'], 'SSL'));
+	  
+	  $this->response->redirect($this->url->link('tool/import_yml', 'token=' . $this->session->data['token'], 'SSL'));
+    
+	}
   }
 
   public function resume()
@@ -633,9 +627,17 @@ class ControllerToolImportYml extends Controller {
 
     unlink(DIR_DOWNLOAD . 'import.yml');
     
-    $this->model_setting_setting->editSetting('import_yml_file', array());
+    $this->model_setting_setting->editSetting('import_yml', array());
 
-    $this->redirect($this->url->link('tool/import_yml', 'token=' . $this->session->data['token'], 'SSL'));
+    $this->response->redirect($this->url->link('tool/import_yml', 'token=' . $this->session->data['token'], 'SSL'));
   }
+  
+  private function validate()
+  {
+    if (!$this->user->hasPermission('modify', 'module/category')) {
+			$this->error['warning'] = $this->language->get('error_permission');
+		}
+		return !$this->error;
+  }  
 }
 ?>

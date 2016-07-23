@@ -22,6 +22,7 @@ $_['entry_save_settings'] = 'Save settings without import (for cron task):';
 
 // Error
 $_['error_permission']    = 'Warning: You do not have permission to import YML!';
+$_['error_empty']      	= 'The downloaded file is empty!';
 
 // Button labels
 $_['button_import']     = 'Import';

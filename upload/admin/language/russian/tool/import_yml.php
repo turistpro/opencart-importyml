@@ -24,6 +24,7 @@ $_['entry_save_settings'] = 'Сохранить настройки без имп
 
 // Error
 $_['error_permission']  = 'Внимание: У вас нет прав!';
+$_['error_empty']      = 'Загруженный файл пуст!';
 
 // Button labels
 $_['button_import']     = 'Импорт';

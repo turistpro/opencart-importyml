@@ -24,6 +24,23 @@ class ModelToolImportYml extends Model {
     return $result;
   }
   
+  public function loadAttributeGroup() {
+	  $result = $this->db->query('SELECT * FROM `' . DB_PREFIX  . 'attribute_group` ORDER BY `attribute_group_id` LIMIT 0, 1');
+
+    return $result;
+  }
+  
+  public function loadProducts() {
+    $result = $this->db->query('SELECT product_id, model FROM `' . DB_PREFIX . 'product`');
+
+    return $result->rows;
+  }
+  
+  public function loadCategory($parent_id, $category_name) {
+    $result = $this->db->query('SELECT * FROM `' . DB_PREFIX . 'category` INNER JOIN `' . DB_PREFIX . 'category_description` ON `' . DB_PREFIX . 'category_description`.category_id = `' . DB_PREFIX . 'category`.category_id WHERE parent_id = ' . (int)$parent_id . ' AND `' . DB_PREFIX . 'category_description`.name LIKE "' . $this->db->escape($category_name) . '"');
+
+    return $result;
+  }
   public function deleteCategories() {
     $this->db->query("TRUNCATE TABLE  `" . DB_PREFIX  . "category`");
     $this->db->query("TRUNCATE TABLE  `" . DB_PREFIX  . "category_description`");
@@ -55,7 +72,7 @@ class ModelToolImportYml extends Model {
   
   public function deleteManufactures() {
     $this->db->query("TRUNCATE TABLE  `" . DB_PREFIX  . "manufacturer`");
-    $this->db->query("TRUNCATE TABLE  `" . DB_PREFIX  . "manufacturer_description`");
+    #$this->db->query("TRUNCATE TABLE  `" . DB_PREFIX  . "manufacturer_description`");
     $this->db->query("TRUNCATE TABLE  `" . DB_PREFIX  . "manufacturer_to_store`");
   }
   
